@@ -22,7 +22,8 @@ exports.process = function (options) {
 	options = _.extend({
 		assets: {},
 		debug: true,
-		webroot: false
+		webroot: false,
+		fileArrayFormat: false
 	}, options);
 
 	/**
@@ -88,10 +89,10 @@ exports.process = function (options) {
 			_.each(files, function (value, key) {
 				if (!options.debug) {
 					// Production
-					assets[groupName][fileType].push(key);
+					assets[groupName][fileType].push((options.fileArrayFormat ? value.dest : key));
 				} else {
 					// Development
-					assets[groupName][fileType] = assets[groupName][fileType].concat(getAssets(value));
+					assets[groupName][fileType] = assets[groupName][fileType].concat(getAssets((options.fileArrayFormat ? value.src : value)));
 				}
 			});
 			if (options.webroot) {
