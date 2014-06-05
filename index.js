@@ -46,22 +46,31 @@ exports.process = function (options) {
 	 * @param pattern
 	 */
 	var getAssets = function (pattern) {
-		var files = [];
-		if (_.isArray(pattern)) {
-			_.each(pattern, function (path) {
-				files = files.concat(getAssets(path));
-			});
-		} else if (_.isString(pattern)) {
-			var regex = new RegExp('^(http://|https://|//)');
-			if (regex.test(pattern)) {
-				// Source is external
-				files.push(pattern);
-			} else {
-				glob(pattern, globOptions, function (er, matches) {
-					files = filterFiles(matches);
-				});
-			}
-		}
+
+        if (!_.isArray(pattern)) {
+            pattern = [pattern];
+        }
+
+        var files = [];
+        var regex = new RegExp('^(http://|https://|//)');
+
+        _.each(pattern, function (path) {
+            if (regex.test(path)) {
+                // Source is external
+                files.push(path);
+            } else {
+                var exclusion = path.indexOf('!') === 0;
+                if (exclusion) { path = path.slice(1);}
+                glob(path, globOptions, function (er, matches) {
+                    files.concat(filterFiles(matches));
+                    if (exclusion) {
+                        files = _.difference(files, matches);
+                    } else {
+                        files = _.union(files, matches);
+                    }
+                });
+            }
+        });
 
 		return files;
 	};
@@ -82,25 +91,29 @@ exports.process = function (options) {
 	};
 
 	// Core logic to format assets
-	_.each(options.assets, function (group, groupName) {
-		assets[groupName] = {};
-		_.each(group, function (files, fileType) {
-			assets[groupName][fileType] = [];
-			_.each(files, function (value, key) {
-				if (!options.debug) {
-					// Production
-					assets[groupName][fileType].push((options.fileArrayFormat ? value.dest : key));
-				} else {
-					// Development
-					assets[groupName][fileType] = assets[groupName][fileType].concat(getAssets((options.fileArrayFormat ? value.src : value)));
-				}
-			});
-			if (options.webroot) {
-				// Strip the webroot foldername from the filepath
-				assets[groupName][fileType] = stripServerPath(assets[groupName][fileType]);
-			}
-		});
-	});
+    _.each(options.assets, function (group, groupName) {
+        assets[groupName] = {};
+        _.each(group, function (files, fileType) {
+            assets[groupName][fileType] = [];
+            if (options.fileArrayFormat) {
+                assets[groupName][fileType] = ((options.debug) ? getAssets(files.src) : files.dest);
+            } else {
+                _.each(files, function (value, key) {
+                    if (!options.debug) {
+                        // Production
+                        assets[groupName][fileType].push(key);
+                    } else {
+                        // Development
+                        assets[groupName][fileType] = assets[groupName][fileType].concat(getAssets(value));
+                    }
+                });
+            }
+            if (options.webroot) {
+                // Strip the webroot foldername from the filepath
+                assets[groupName][fileType] = stripServerPath(assets[groupName][fileType]);
+            }
+        });
+    });
 
 	return assets;
 };
