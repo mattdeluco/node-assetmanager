@@ -8,7 +8,7 @@
 
 'use strict';
 
-var glob = require('glob'),
+var grunt = require('grunt'),
 	fs = require('fs'),
 	_ = require('underscore');
 
@@ -27,52 +27,18 @@ exports.process = function (options) {
 	}, options);
 
 	/**
-	 * Filter out assets that are not files
-	 *
-	 * @param files
-	 */
-	var filterFiles = function (files) {
-		return _.filter(files, function (file) {
-			return fs.statSync(file).isFile();
-		});
-	};
-
-	/**
-	 * Get assets from pattern. Pattern could be
+	 * Get assets from patterns. Patterns could be
 	 *  - an array
 	 *  - a string
 	 *  - external resource
 	 *
-	 * @param pattern
+	 * @param patterns
 	 */
-	var getAssets = function (pattern) {
-
-        if (!_.isArray(pattern)) {
-            pattern = [pattern];
+	var getAssets = function (patterns) {
+        if (!_.isArray(patterns)) {
+            patterns = [patterns];
         }
-
-        var files = [];
-        var regex = new RegExp('^(http://|https://|//)');
-
-        _.each(pattern, function (path) {
-            if (regex.test(path)) {
-                // Source is external
-                files.push(path);
-            } else {
-                var exclusion = path.indexOf('!') === 0;
-                if (exclusion) { path = path.slice(1);}
-                glob(path, globOptions, function (er, matches) {
-                    files.concat(filterFiles(matches));
-                    if (exclusion) {
-                        files = _.difference(files, matches);
-                    } else {
-                        files = _.union(files, matches);
-                    }
-                });
-            }
-        });
-
-		return files;
+		return grunt.file.expand(patterns);
 	};
 
 	/**
