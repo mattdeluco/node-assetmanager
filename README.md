@@ -245,7 +245,8 @@ resources.
 * webroot - strip the webroot folder name from the file path
 * fileArrayFormat - when true assumes asset object is in file array format
 * callback - custom callback to handle file pattern expansion
-** has one parameter that is set to the file type value in the assets config
+  * has one parameter that is set to the file type value in the assets config
+  * if fileArrayFormat is true it will take precendence over callback
 
 ```
 'use strict';
