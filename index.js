@@ -16,14 +16,13 @@ var grunt = require('grunt'),
 var assets = {};
 
 exports.process = function (options) {
-	// Glob options
-	var globOptions = {sync: true};
 
 	options = _.extend({
 		assets: {},
 		debug: true,
 		webroot: false,
-		fileArrayFormat: false
+		fileArrayFormat: false,
+        callback: null
 	}, options);
 
 	/**
@@ -35,9 +34,6 @@ exports.process = function (options) {
 	 * @param patterns
 	 */
 	var getAssets = function (patterns) {
-        if (!_.isArray(patterns)) {
-            patterns = [patterns];
-        }
 		return grunt.file.expand(patterns);
 	};
 
@@ -56,30 +52,44 @@ exports.process = function (options) {
 		return files;
 	};
 
-	// Core logic to format assets
-    _.each(options.assets, function (group, groupName) {
-        assets[groupName] = {};
-        _.each(group, function (files, fileType) {
-            assets[groupName][fileType] = [];
-            if (options.fileArrayFormat) {
-                assets[groupName][fileType] = ((options.debug) ? getAssets(files.src) : files.dest);
+    var processAssets = function (fn) {
+        _.each(options.assets, function (group, groupName) {
+            assets[groupName] = {};
+            _.each(group, function (patterns, fileType) {
+                assets[groupName][fileType] = fn(patterns);
+                if (options.webroot) {
+                    // Strip the webroot foldername from the filepath
+                    assets[groupName][fileType] = stripServerPath(assets[groupName][fileType]);
+                }
+            });
+        });
+    };
+
+    var processFileObjectFormat = function (patterns) {
+        var files = [];
+        _.each(patterns, function (value, key) {
+            if (!options.debug) {
+                // Production
+                files.push(key);
             } else {
-                _.each(files, function (value, key) {
-                    if (!options.debug) {
-                        // Production
-                        assets[groupName][fileType].push(key);
-                    } else {
-                        // Development
-                        assets[groupName][fileType] = assets[groupName][fileType].concat(getAssets(value));
-                    }
-                });
-            }
-            if (options.webroot) {
-                // Strip the webroot foldername from the filepath
-                assets[groupName][fileType] = stripServerPath(assets[groupName][fileType]);
+                // Development
+                files = files.concat(getAssets(value));
             }
         });
-    });
+        return files;
+    };
+
+    var processFileArrayFormat = function (patterns) {
+        return ((options.debug) ? getAssets(patterns.src) : patterns.dest);
+    };
+
+    var callback = processFileObjectFormat;
+    if (options.fileArrayFormat) {
+        callback = processFileArrayFormat;
+    } else if (options.callback) {
+        callback = options.callback;
+    }
+    processAssets(callback);
 
 	return assets;
 };
