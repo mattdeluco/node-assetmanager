@@ -26,18 +26,6 @@ exports.process = function (options) {
 	}, options);
 
 	/**
-	 * Get assets from patterns. Patterns could be
-	 *  - an array
-	 *  - a string
-	 *  - external resource
-	 *
-	 * @param patterns
-	 */
-	var getAssets = function (patterns) {
-		return grunt.file.expand(patterns);
-	};
-
-	/**
 	 * Strip server path from from file path so
 	 * that the file path is relative to the webroot
 	 *
@@ -73,14 +61,14 @@ exports.process = function (options) {
                 files.push(key);
             } else {
                 // Development
-                files = files.concat(getAssets(value));
+                files = files.concat(grunt.file.expand(value));
             }
         });
         return files;
     };
 
     var processFileArrayFormat = function (patterns) {
-        return ((options.debug) ? getAssets(patterns.src) : patterns.dest);
+        return ((options.debug) ? grunt.file.expand(patterns.src) : patterns.dest);
     };
 
     var callback = processFileObjectFormat;
